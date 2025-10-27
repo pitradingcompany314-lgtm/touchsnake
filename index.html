@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>PI Snake Touch — Responsive Swipe Game</title>
+  <meta name="theme-color" content="#4ecdc4" />
+  <style>
+    :root {
+      --primary-color: #4ecdc4;
+      --primary-dark: #45b7aa;
+      --accent-color: #ff6b6b;
+      --pi-color: #9b59b6;
+      --gold: #ffd700;
+      --text-color: #ffffff;
+      --bg1: #667eea;
+      --bg2: #764ba2;
+      --glass: rgba(255, 255, 255, 0.12);
+      --glass-strong: rgba(255, 255, 255, 0.18);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      --panel-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      background:
+        radial-gradient(1200px 800px at 10% 10%, rgba(255,255,255,0.06), transparent 60%),
+        radial-gradient(1200px 800px at 90% 90%, rgba(255,255,255,0.06), transparent 60%),
+        linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+      color: var(--text-color);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      padding: 12px;
+    }
+
+    .game-shell {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background: var(--glass);
+      backdrop-filter: blur(14px) saturate(1.2);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .title h1 {
+      font-size: clamp(1.3rem, 4vw, 1.8rem);
+      margin: 0;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+      letter-spacing: 0.4px;
+    }
+
+    .pi-em {
+      color: var(--gold);
+      font-weight: 900;
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.55);
+      filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+    }
+
+    .top-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .pill-btn, .icon-btn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-color);
+      background: var(--glass-strong);
+      box-shadow: var(--panel-shadow);
+      transition: transform 0.15s ease, background 0.2s ease, opacity 0.2s ease;
+      outline: none;
+    }
+
+    .icon-btn {
+      width: clamp(32px, 10vw, 40px);
+      height: clamp(32px, 10vw, 40px);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: clamp(14px, 4vw, 18px);
+      line-height: 1;
+    }
+
+    .pill-btn {
+      padding: 8px 12px;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .icon-btn:hover, .pill-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.22);
+    }
+
+    .game-area {
+      display: grid;
+      gap: 10px;
+    }
+
+    .canvas-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: 2;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: min(500px, 80vmin);
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      background: #000;
+      border: 2.5px solid rgba(255,255,255,0.85);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    .grid-overlay {
+      position: absolute;
+      inset: 6px;
+      border-radius: 10px;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 20px 20px, 20px 20px;
+      animation: gridFlow 6s linear infinite;
+      opacity: 0.55;
+    }
+    @keyframes gridFlow {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 20px 20px, 20px 20px; }
+    }
+    .grid-hidden { opacity: 0; }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .badge {
+      font-weight: 700;
+      background: rgba(0,0,0,0.28);
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: clamp(11px, 3vw, 13px);
+      text-align: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+      letter-spacing: 0.2px;
+    }
+
+    .controls-section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .primary-btn {
+      padding: 12px 16px;
+      font-size: clamp(14px, 4vw, 16px);
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+      color: #00100d;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.28);
+      transition: transform 0.12s ease, filter 0.2s ease;
+    }
+    .primary-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .primary-btn:active { transform: translateY(1px); }
+
+    .instructions {
+      font-size: clamp(11px, 3vw, 13px);
+      color: rgba(255,255,255,0.86);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .game-over {
+      display: none;
+      color: var(--accent-color);
+      font-size: clamp(16px, 5vw, 20px);
+      font-weight: 900;
+      text-align: center;
+      animation: pulse 1.5s infinite;
+      letter-spacing: 0.3px;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+
+    /* Swipe Controls */
+    .swipe-controls {
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .swipe-area {
+      display: block;
+      width: 100%;
+      height: clamp(80px, 15vh, 120px);
+      background: rgba(255,255,255,0.1);
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+      box-shadow: inset 0 0 14px rgba(0,0,0,0.38);
+    }
+    .swipe-area::before {
+      content: "Swipe to control";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,0.8);
+      font-size: clamp(11px, 3vw, 13px);
+      letter-spacing: 0.3px;
+      pointer-events: none;
+      text-align: center;
+    }
+    .swipe-indicator {
+      position: absolute;
+      width: clamp(35px, 10vw, 45px);
+      height: clamp(35px, 10vw, 45px);
+      background: rgba(78,205,196,0.8);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.08s;
+      box-shadow: 0 0 18px rgba(78,205,196,0.55);
+    }
+
+    .swipe-controls.horizontal {
+      display: flex;
+      gap: 12px;
+    }
+    .swipe-controls.horizontal .swipe-area {
+      height: clamp(80px, 15vh, 120px);
+    }
+
+    .swipe-controls.vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .swipe-controls.vertical .swipe-area {
+      height: clamp(60px, 12vh, 90px);
+    }
+
+    .swipe-controls.single {
+      display: flex;
+      justify-content: center;
+    }
+    .swipe-controls.single .swipe-area {
+      max-width: min(400px, 90%);
+    }
+
+    /* Canvas Swipe Indicator */
+    .canvas-swipe-indicator {
+      position: absolute;
+      width: clamp(40px, 12vw, 55px);
+      height: clamp(40px, 12vw, 55px);
+      background: rgba(78,205,196,0.9);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.08s;
+      box-shadow: 0 0 20px rgba(78,205,196,0.7);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #00100d;
+      font-size: clamp(14px, 4vw, 18px);
+    }
+
+    /* Settings Menu */
+    .settings-menu {
+      position: fixed;
+      top: 0;
+      right: -350px;
+      width: min(320px, 85vw);
+      height: 100%;
+      background: rgba(30, 30, 40, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+      transition: right 0.3s ease;
+      z-index: 100;
+      padding: 20px;
+      overflow-y: auto;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-menu.open {
+      right: 0;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-header h2 {
+      margin: 0;
+      font-size: clamp(1.2rem, 5vw, 1.5rem);
+      color: var(--primary-color);
+    }
+
+    .close-settings {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .settings-group {
+      margin-bottom: 25px;
+    }
+
+    .settings-group h3 {
+      margin: 0 0 12px 0;
+      font-size: clamp(1rem, 4vw, 1.2rem);
+      color: var(--gold);
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 15px;
+      box-shadow: var(--panel-shadow);
+      font-size: clamp(13px, 3.5vw, 15px);
+      font-weight: 600;
+    }
+    .toggle input[type="checkbox"] {
+      appearance: none;
+      width: 38px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.24);
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .toggle input[type="checkbox"]::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      background: white;
+      transition: transform 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    }
+    .toggle input[type="checkbox"]:checked {
+      background: var(--primary-color);
+    }
+    .toggle input[type="checkbox"]:checked::after {
+      transform: translateX(18px);
+    }
+
+    .menu-btn {
+      background: var(--glass-strong);
+      color: var(--text-color);
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: clamp(13px, 3.5vw, 15px);
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .menu-btn:hover {
+      background: rgba(255,255,255,0.22);
+      transform: translateY(-2px);
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      z-index: 99;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .game-shell { 
+        max-width: 95%;
+        padding: 12px;
+      }
+      .canvas-container {
+        flex-direction: column;
+      }
+      .settings-menu {
+        width: min(280px, 85vw);
+        right: -280px;
+      }
+      .swipe-controls.horizontal {
+        flex-direction: column;
+      }
+      .swipe-controls.horizontal .swipe-area {
+        height: clamp(70px, 12vh, 100px);
+      }
+      .hud {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+      .game-shell {
+        padding: 10px;
+        gap: 10px;
+      }
+      .header {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 10px;
+      }
+      .top-controls {
+        justify-content: center;
+      }
+      .canvas-wrap {
+        flex: 1;
+      }
+      canvas {
+        max-width: 90vmin;
+      }
+      .badge {
+        padding: 6px 8px;
+      }
+      .primary-btn {
+        padding: 10px 14px;
+      }
+    }
+
+    @media (max-height: 600px) and (orientation: landscape) {
+      body {
+        padding: 5px;
+      }
+      .game-shell {
+        max-height: 95vh;
+        overflow-y: auto;
+        gap: 8px;
+      }
+      .swipe-controls {
+        display: none !important;
+      }
+      .instructions {
+        display: none;
+      }
+    }
+
+    /* Device-specific optimizations */
+    @media (pointer: coarse) {
+      /* For touch devices */
+      .icon-btn, .pill-btn, .primary-btn {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }
+
+    @media (pointer: fine) {
+      /* For devices with mouse */
+      .swipe-area:hover {
+        background: rgba(255,255,255,0.15);
+      }
+    }
+
+    /* High DPI screens */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .grid-overlay {
+        background-size: 10px 10px, 10px 10px;
+      }
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" role="main" aria-label="PI Snake Touch game">
+    <header class="header">
+      <div class="title" aria-live="polite">
+        <span class="pi-em">π</span>
+        <h1>PI Snake Touch</h1>
+        <span class="pi-em">π</span>
+      </div>
+      <div class="top-controls" role="toolbar" aria-label="Quick controls">
+        <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+        <button class="icon-btn" id="pauseBtn" title="Pause/Resume" aria-pressed="false">⏯</button>
+        <button class="icon-btn" id="resetBtn" title="Reset game">↻</button>
+      </div>
+    </header>
+
+    <section class="game-area" aria-label="Game area">
+      <div class="canvas-container">
+        <div class="canvas-wrap">
+          <canvas id="gameCanvas" width="500" height="500" aria-label="Snake game canvas"></canvas>
+          <div id="gridOverlay" class="grid-overlay"></div>
+          <div id="canvasSwipeIndicator" class="canvas-swipe-indicator"></div>
+        </div>
+      </div>
+      
+      <div class="hud" aria-label="Game stats">
+        <div class="badge">Score: <span id="score">0</span></div>
+        <div class="badge">Speed: <span id="speed">1</span></div>
+        <div class="badge">High: <span id="highScore">0</span></div>
+        <div class="badge">PI: <span id="piTimer">23</span>s</div>
+      </div>
+    </section>
+
+    <!-- Optional Swipe Controls -->
+    <div class="swipe-controls" id="swipeControls">
+      <div class="swipe-area" id="swipeArea">
+        <div class="swipe-indicator" id="swipeIndicator"></div>
+      </div>
+    </div>
+
+    <section class="controls-section" aria-label="Controls">
+      <button class="primary-btn" id="startBtn">Start game</button>
+
+      <p class="instructions">
+        Eat red for growth. Collect purple π for speed boost (but shrink). 
+        Press Space to restart. Swipe on the game board or control panel to steer.
+      </p>
+
+      <div id="gameOver" class="game-over" aria-live="assertive">
+        Game Over — press SPACE or the button to play again
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Menu -->
+  <div class="overlay" id="overlay"></div>
+  <div class="settings-menu" id="settingsMenu">
+    <div class="settings-header">
+      <h2>Game Settings</h2>
+      <button class="close-settings" id="closeSettings">×</button>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Gameplay</h3>
+      <div class="settings-list">
+        <label class="toggle">
+          Edge wrap
+          <input type="checkbox" id="wrapToggle" />
+        </label>
+        <label class="toggle">
+          Show grid
+          <input type="checkbox" id="gridToggle" checked />
+        </label>
+        <label class="toggle">
+          Move beep sound
+          <input type="checkbox" id="moveBeepToggle" checked />
+        </label>
+        <label class="toggle">
+          Canvas swipe controls
+          <input type="checkbox" id="canvasSwipeToggle" checked />
+        </label>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Controls</h3>
+      <div class="settings-list">
+        <label class="toggle">
+          Bottom swipe bar
+          <input type="checkbox" id="swipeToggle" checked />
+        </label>
+        <div class="toggle">
+          Swipe bar position
+          <select id="swipePositionSelect">
+            <option value="single">Single Bar (Bottom)</option>
+            <option value="horizontal">Dual Bars (Left & Right)</option>
+            <option value="vertical">Dual Bars (Top & Bottom)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Audio</h3>
+      <div class="settings-list">
+        <label class="toggle">
+          Sound effects
+          <input type="checkbox" id="soundToggle" checked />
+        </label>
+        <label class="toggle">
+          Background music
+          <input type="checkbox" id="musicToggle" checked />
+        </label>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Accessibility</h3>
+      <div class="settings-list">
+        <label class="toggle">
+          Vibration/Haptics
+          <input type="checkbox" id="hapticsToggle" checked />
+        </label>
+        <label class="toggle">
+          Colorblind mode
+          <input type="checkbox" id="colorblindToggle" />
+        </label>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Data</h3>
+      <div class="settings-list">
+        <button class="menu-btn" id="resetHighScore">
+          Reset High Score
+        </button>
+        <button class="menu-btn" id="clearSettings">
+          Reset All Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const scoreEl = document.getElementById('score');
+    const speedEl = document.getElementById('speed');
+    const highScoreEl = document.getElementById('highScore');
+    const piTimerEl = document.getElementById('piTimer');
+    const gameOverEl = document.getElementById('gameOver');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const startBtn = document.getElementById('startBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const closeSettings = document.getElementById('closeSettings');
+    const settingsMenu = document.getElementById('settingsMenu');
+    const overlay = document.getElementById('overlay');
+    const gridOverlay = document.getElementById('gridOverlay');
+    const resetHighScoreBtn = document.getElementById('resetHighScore');
+    const clearSettingsBtn = document.getElementById('clearSettings');
+    const canvasSwipeIndicator = document.getElementById('canvasSwipeIndicator');
+    const swipeControls = document.getElementById('swipeControls');
+    const swipeArea = document.getElementById('swipeArea');
+    const swipeIndicator = document.getElementById('swipeIndicator');
+
+    const soundToggle = document.getElementById('soundToggle');
+    const musicToggle = document.getElementById('musicToggle');
+    const wrapToggle = document.getElementById('wrapToggle');
+    const gridToggle = document.getElementById('gridToggle');
+    const colorblindToggle = document.getElementById('colorblindToggle');
+    const hapticsToggle = document.getElementById('hapticsToggle');
+    const canvasSwipeToggle = document.getElementById('canvasSwipeToggle');
+    const swipeToggle = document.getElementById('swipeToggle');
+    const swipePositionSelect = document.getElementById('swipePositionSelect');
+    const moveBeepToggle = document.getElementById('moveBeepToggle');
+
+    // Constants
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+    const baseSpeedMs = 150;
+    const minStepMs = 28;
+    const maxParticles = 140;
+
+    // State
+    let snake = [];
+    let food = {};
+    let pi = null;
+    let dir = { x: 0, y: 0 };
+    let pendingDir = { x: 0, y: 0 };
+    let score = 0;
+    let highScore = Number(localStorage.getItem('pisnakeHighScore')) || 0;
+    let gameRunning = false;
+    let gameStarted = false;
+    let paused = false;
+
+    let currentStepMs = baseSpeedMs;
+    let speedLevel = 1;
+
+    let lastFrameTime = 0;
+    let accumulator = 0;
+
+    let particles = [];
+    let piTimer = 23;
+    let piInterval = null;
+    let lastMoveBeepTime = 0;
+    let moveBeepEnabled = true;
+
+    // Audio
+    let audioContext = null;
+    let musicInterval = null;
+    let soundEnabled = true;
+    let musicEnabled = true;
+
+    // Settings persisted
+    const settingsKey = 'pisnakeSettings';
+
+    // Utils
+    const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
+
+    function saveSettings() {
+      const payload = {
+        sound: soundToggle.checked,
+        music: musicToggle.checked,
+        wrap: wrapToggle.checked,
+        grid: gridToggle.checked,
+        colorblind: colorblindToggle.checked,
+        haptics: hapticsToggle.checked,
+        canvasSwipe: canvasSwipeToggle.checked,
+        swipe: swipeToggle.checked,
+        swipePosition: swipePositionSelect.value,
+        moveBeep: moveBeepToggle.checked,
+      };
+      localStorage.setItem(settingsKey, JSON.stringify(payload));
+    }
+    
+    function loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem(settingsKey));
+        if (!s) return;
+        soundToggle.checked = !!s.sound;
+        musicToggle.checked = !!s.music;
+        wrapToggle.checked = !!s.wrap;
+        gridToggle.checked = !!s.grid;
+        colorblindToggle.checked = !!s.colorblind;
+        hapticsToggle.checked = !!s.haptics;
+        canvasSwipeToggle.checked = s.canvasSwipe !== false;
+        swipeToggle.checked = s.swipe !== false;
+        swipePositionSelect.value = s.swipePosition || 'single';
+        moveBeepToggle.checked = s.moveBeep !== false;
+        applySettings();
+      } catch {}
+    }
+    
+    function applySettings() {
+      document.body.classList.toggle('colorblind', colorblindToggle.checked);
+      gridOverlay.classList.toggle('grid-hidden', !gridToggle.checked);
+      soundEnabled = soundToggle.checked;
+      musicEnabled = musicToggle.checked;
+      moveBeepEnabled = moveBeepToggle.checked;
+      
+      // Update swipe controls visibility and layout
+      swipeControls.style.display = swipeToggle.checked ? 'block' : 'none';
+      swipeControls.className = 'swipe-controls ' + swipePositionSelect.value;
+      
+      // Update canvas swipe functionality
+      if (canvasSwipeToggle.checked) {
+        canvas.style.cursor = 'pointer';
+      } else {
+        canvas.style.cursor = 'default';
+      }
+      
+      if (!musicEnabled) stopMusic();
+      else if (gameRunning) playMusic();
+      saveSettings();
+    }
+
+    // Game Init/Reset
+    function init() {
+      snake = [{ x: Math.floor(tileCount / 2), y: Math.floor(tileCount / 2) }];
+      dir = { x: 0, y: 0 };
+      pendingDir = { x: 0, y: 0 };
+      score = 0;
+      gameRunning = true;
+      gameStarted = false;
+      paused = false;
+      currentStepMs = baseSpeedMs;
+      speedLevel = 1;
+      particles = [];
+      pi = null;
+      piTimer = 23;
+      accumulator = 0;
+      lastFrameTime = performance.now();
+      lastMoveBeepTime = performance.now();
+
+      clearInterval(piInterval);
+      clearInterval(musicInterval);
+
+      startPiTimer();
+      generateFood();
+      updateHUD();
+      gameOverEl.style.display = 'none';
+      startBtn.textContent = 'Start game';
+      startBtn.style.display = 'none';
+      pauseBtn.setAttribute('aria-pressed', 'false');
+
+      requestAnimationFrame(gameLoop);
+
+      if (musicEnabled) playMusic();
+    }
+
+    function startGame(immediateDir = { x: 1, y: 0 }) {
+      init();
+      visualCountdown(3).then(() => {
+        gameStarted = true;
+        setDirection(immediateDir.x, immediateDir.y);
+      });
+    }
+
+    function visualCountdown(n) {
+      return new Promise((resolve) => {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let count = n;
+
+        const tick = () => {
+          draw();
+          ctx.save();
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 72px Inter, Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(count), centerX, centerY);
+          ctx.restore();
+        };
+
+        const interval = setInterval(() => {
+          tick();
+          count -= 1;
+          if (count <= 0) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 500);
+        tick();
+      });
+    }
+
+    // Timers
+    function startPiTimer() {
+      piInterval = setInterval(() => {
+        if (gameRunning && !paused) {
+          piTimer -= 1;
+          if (piTimer <= 0) {
+            generatePi();
+            piTimer = 23;
+            haptic(10);
+          }
+          piTimerEl.textContent = piTimer;
+        }
+      }, 1000);
+    }
+
+    // Entities
+    function randomFreeTile() {
+      let x, y, valid;
+      do {
+        x = Math.floor(Math.random() * tileCount);
+        y = Math.floor(Math.random() * tileCount);
+        valid = !snake.some(s => s.x === x && s.y === y);
+        if (pi && x === pi.x && y === pi.y) valid = false;
+      } while (!valid);
+      return { x, y };
+    }
+
+    function generateFood() {
+      food = { ...randomFreeTile(), type: 'food' };
+    }
+    function generatePi() {
+      pi = { ...randomFreeTile(), type: 'pi' };
+    }
+
+    // Particles
+    function createParticles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        if (particles.length > maxParticles) break;
+        particles.push({
+          x: x * gridSize + gridSize / 2,
+          y: y * gridSize + gridSize / 2,
+          size: Math.random() * 2.6 + 1,
+          speedX: (Math.random() - 0.5) * 4.2,
+          speedY: (Math.random() - 0.5) * 4.2,
+          color,
+          life: 28 + Math.floor(Math.random() * 8),
+        });
+      }
+    }
+    function updateParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.speedX;
+        p.y += p.speedY;
+        p.life -= dt * 60 / 1000;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.globalAlpha = clamp(p.life / 30, 0, 1);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Drawing
+    function drawSnakeTri(x, y, direction, isHead = false) {
+      const cx = x * gridSize + gridSize / 2;
+      const cy = y * gridSize + gridSize / 2;
+      const size = gridSize / 2 - 2;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      let angle = 0;
+      if (direction.x === 1) angle = 0;
+      else if (direction.x === -1) angle = Math.PI;
+      else if (direction.y === -1) angle = -Math.PI / 2;
+      else if (direction.y === 1) angle = Math.PI / 2;
+      ctx.rotate(angle);
+
+      ctx.beginPath();
+      ctx.moveTo(size, 0);
+      ctx.lineTo(-size, -size / 1.6);
+      ctx.lineTo(-size, size / 1.6);
+      ctx.closePath();
+
+      const gradient = ctx.createLinearGradient(-size, 0, size, 0);
+      if (isHead) {
+        gradient.addColorStop(0, '#45b7aa');
+        gradient.addColorStop(1, '#4ecdc4');
+      } else {
+        gradient.addColorStop(0, '#4ecdc4');
+        gradient.addColorStop(1, '#45b7aa');
+      }
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFood() {
+      const pulse = Math.sin(Date.now() / 220) * 0.2 + 0.8;
+      ctx.fillStyle = `rgba(255, 107, 107, ${pulse})`;
+      ctx.beginPath();
+      ctx.arc(
+        food.x * gridSize + gridSize / 2,
+        food.y * gridSize + gridSize / 2,
+        (gridSize / 2 - 2) * pulse,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.shadowColor = '#ff6b6b';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawPi() {
+      if (!pi) return;
+      const piPulse = Math.sin(Date.now() / 160) * 0.3 + 0.7;
+      ctx.fillStyle = `rgba(155, 89, 182, ${piPulse})`;
+      ctx.beginPath();
+      ctx.arc(
+        pi.x * gridSize + gridSize / 2,
+        pi.y * gridSize + gridSize / 2,
+        (gridSize / 2 - 2) * piPulse,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.shadowColor = '#9b59b6';
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px Inter, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('π', pi.x * gridSize + gridSize / 2, pi.y * gridSize + gridSize / 2);
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function draw() {
+      clearCanvas();
+      drawParticles();
+
+      for (let i = 0; i < snake.length; i++) {
+        let direction = dir;
+        if (i > 0) {
+          direction = {
+            x: snake[i - 1].x - snake[i].x,
+            y: snake[i - 1].y - snake[i].y,
+          };
+        }
+        drawSnakeTri(snake[i].x, snake[i].y, direction, i === 0);
+      }
+
+      drawFood();
+      drawPi();
+    }
+
+    // Update
+    function step() {
+      if (!gameRunning || !gameStarted || paused) return;
+
+      if (!isReverse(pendingDir)) {
+        dir = pendingDir;
+      }
+
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      if (wrapToggle.checked) {
+        if (head.x < 0) head.x = tileCount - 1;
+        if (head.x >= tileCount) head.x = 0;
+        if (head.y < 0) head.y = tileCount - 1;
+        if (head.y >= tileCount) head.y = 0;
+      } else {
+        if (
+          head.x < 0 ||
+          head.x >= tileCount ||
+          head.y < 0 ||
+          head.y >= tileCount
+        ) {
+          return gameOver();
+        }
+      }
+
+      for (let i = 0; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) {
+          return gameOver();
+        }
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        createParticles(food.x, food.y, 16, '#ff6b6b');
+        generateFood();
+
+        currentStepMs = Math.max(minStepMs, currentStepMs * (1 - 0.00314));
+        updateSpeedLevel();
+        playSFX(523.25, 0.18, 0.10);
+        haptic(8);
+      } else if (pi && head.x === pi.x && head.y === pi.y) {
+        currentStepMs = Math.max(minStepMs, currentStepMs * (1 - 0.314));
+
+        const newLen = Math.max(1, Math.floor(snake.length * 0.314));
+        snake = snake.slice(0, newLen);
+
+        score += 15;
+        createParticles(pi.x, pi.y, 22, '#9b59b6');
+        pi = null;
+        piTimer = 23;
+        updateSpeedLevel();
+        playSFX(659.25, 0.28, 0.10);
+        haptic(10);
+      } else {
+        snake.pop();
+      }
+
+      // Play movement beep if enabled
+      const now = performance.now();
+      if (moveBeepEnabled && soundEnabled && now - lastMoveBeepTime > currentStepMs * 0.85) {
+        playMoveBeep();
+        lastMoveBeepTime = now;
+      }
+
+      updateHUD();
+    }
+
+    function isReverse(next) {
+      if (snake.length <= 1) return false;
+      return next.x === -dir.x && next.y === -dir.y;
+    }
+
+    function setDirection(x, y) {
+      pendingDir = { x, y };
+    }
+
+    function updateSpeedLevel() {
+      const newLevel = Math.floor(score / 30) + 1;
+      if (newLevel > speedLevel) {
+        speedLevel = newLevel;
+        createParticles(snake[0].x, snake[0].y, 10, '#4ecdc4');
+      }
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = score;
+      speedEl.textContent = speedLevel;
+      highScoreEl.textContent = highScore;
+      piTimerEl.textContent = piTimer;
+    }
+
+    // Loop with delta time
+    function gameLoop(time) {
+      if (!gameRunning) return;
+      const dt = time - lastFrameTime;
+      lastFrameTime = time;
+      accumulator += dt;
+
+      while (accumulator >= currentStepMs) {
+        step();
+        accumulator -= currentStepMs;
+      }
+
+      draw();
+      updateParticles(dt);
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Game over
+    function gameOver() {
+      gameRunning = false;
+      gameStarted = false;
+      createParticles(snake[0].x, snake[0].y, 24, '#ff6b6b');
+      gameOverEl.style.display = 'block';
+      highScore = Math.max(score, highScore);
+      localStorage.setItem('pisnakeHighScore', String(highScore));
+      updateHUD();
+      clearInterval(piInterval);
+      stopMusic();
+      startBtn.style.display = 'block';
+      startBtn.textContent = 'Play again';
+      haptic(12);
+    }
+
+    // Audio
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSFX(freq, duration, volume = 0.10) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (audioContext.state === 'suspended') audioContext.resume();
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1200;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioContext.destination);
+
+      osc.frequency.value = freq;
+      osc.type = 'triangle';
+
+      const t = audioContext.currentTime;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(volume, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      osc.start(t);
+      osc.stop(t + duration);
+    }
+
+    function playMoveBeep() {
+      playSFX(110, 0.05, 0.05);
+    }
+
+    function playMusic() {
+      if (!musicEnabled) return;
+      initAudio();
+      stopMusic();
+      let i = 0;
+      const notes = [
+        { f: 0, d: 0.5 },
+        { f: 123.47, d: 0.45 },
+        { f: 0, d: 0.4 },
+        { f: 87.31, d: 0.45 },
+        { f: 0, d: 0.4 },
+        { f: 164.81, d: 0.5 },
+        { f: 130.81, d: 0.5 },
+        { f: 98.00, d: 0.5 },
+      ];
+      musicInterval = setInterval(() => {
+        if (!gameRunning || paused) return;
+        const note = notes[i];
+        if (note.f > 0) playSFX(note.f, note.d, 0.08);
+        i = (i + 1) % notes.length;
+      }, 480);
+    }
+    function stopMusic() {
+      if (musicInterval) clearInterval(musicInterval);
+      musicInterval = null;
+    }
+
+    // Haptics
+    function haptic(ms = 8) {
+      if (!hapticsToggle.checked) return;
+      if (navigator.vibrate) navigator.vibrate(ms);
+    }
+
+    // Settings Menu Functions
+    function openSettings() {
+      settingsMenu.classList.add('open');
+      overlay.classList.add('active');
+    }
+
+    function closeSettingsMenu() {
+      settingsMenu.classList.remove('open');
+      overlay.classList.remove('active');
+    }
+
+    function resetHighScore() {
+      highScore = 0;
+      localStorage.setItem('pisnakeHighScore', '0');
+      highScoreEl.textContent = '0';
+    }
+
+    function clearAllSettings() {
+      localStorage.removeItem('pisnakeHighScore');
+      localStorage.removeItem(settingsKey);
+      highScore = 0;
+      highScoreEl.textContent = '0';
+      loadSettings();
+    }
+
+    // Canvas Swipe Controls
+    function setupCanvasSwipe() {
+      if (!canvasSwipeToggle.checked) return;
+      
+      let swipeStartX = 0;
+      let swipeStartY = 0;
+      let isSwiping = false;
+
+      const handleStart = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        swipeStartX = clientX;
+        swipeStartY = clientY;
+        isSwiping = true;
+
+        canvasSwipeIndicator.style.opacity = '1';
+        canvasSwipeIndicator.style.left = `${clientX - rect.left}px`;
+        canvasSwipeIndicator.style.top = `${clientY - rect.top}px`;
+      };
+
+      const handleMove = (clientX, clientY) => {
+        if (!isSwiping) return;
+        const rect = canvas.getBoundingClientRect();
+        canvasSwipeIndicator.style.left = `${clientX - rect.left}px`;
+        canvasSwipeIndicator.style.top = `${clientY - rect.top}px`;
+      };
+
+      const handleEnd = (clientX, clientY) => {
+        if (!isSwiping) return;
+        const endX = clientX;
+        const endY = clientY;
+        const diffX = endX - swipeStartX;
+        const diffY = endY - swipeStartY;
+
+        canvasSwipeIndicator.style.opacity = '0';
+
+        if (!gameStarted && gameRunning) {
+          gameStarted = true;
+          startBtn.style.display = 'none';
+        }
+
+        const absX = Math.abs(diffX);
+        const absY = Math.abs(diffY);
+        if (absX < 10 && absY < 10) { isSwiping = false; return; }
+
+        if (absX > absY) {
+          handleDirection(diffX > 0 ? 1 : -1, 0);
+        } else {
+          handleDirection(0, diffY > 0 ? 1 : -1);
+        }
+
+        isSwiping = false;
+      };
+
+      // Touch events
+      canvas.addEventListener('touchstart', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        const touch = e.touches[0];
+        handleStart(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        const touch = e.touches[0];
+        handleMove(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('touchend', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        const touch = e.changedTouches[0];
+        handleEnd(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      // Mouse events
+      canvas.addEventListener('mousedown', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        handleStart(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        handleMove(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('mouseup', (e) => {
+        if (!canvasSwipeToggle.checked) return;
+        handleEnd(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        if (!canvasSwipeToggle.checked) return;
+        canvasSwipeIndicator.style.opacity = '0';
+        isSwiping = false;
+      });
+    }
+
+    // Swipe Controls Setup
+    function setupSwipeControls() {
+      if (!swipeToggle.checked) return;
+      
+      let swipeStartX = 0;
+      let swipeStartY = 0;
+      let isSwiping = false;
+
+      const handleStart = (clientX, clientY) => {
+        swipeStartX = clientX;
+        swipeStartY = clientY;
+        isSwiping = true;
+
+        swipeIndicator.style.opacity = '1';
+        const rect = swipeArea.getBoundingClientRect();
+        swipeIndicator.style.left = `${clientX - rect.left}px`;
+        swipeIndicator.style.top = `${clientY - rect.top}px`;
+      };
+
+      const handleMove = (clientX, clientY) => {
+        if (!isSwiping) return;
+        const rect = swipeArea.getBoundingClientRect();
+        swipeIndicator.style.left = `${clientX - rect.left}px`;
+        swipeIndicator.style.top = `${clientY - rect.top}px`;
+      };
+
+      const handleEnd = (clientX, clientY) => {
+        if (!isSwiping) return;
+        const endX = clientX;
+        const endY = clientY;
+        const diffX = endX - swipeStartX;
+        const diffY = endY - swipeStartY;
+
+        swipeIndicator.style.opacity = '0';
+
+        if (!gameStarted && gameRunning) {
+          gameStarted = true;
+          startBtn.style.display = 'none';
+        }
+
+        const absX = Math.abs(diffX);
+        const absY = Math.abs(diffY);
+        if (absX < 10 && absY < 10) { isSwiping = false; return; }
+
+        if (absX > absY) {
+          handleDirection(diffX > 0 ? 1 : -1, 0);
+        } else {
+          handleDirection(0, diffY > 0 ? 1 : -1);
+        }
+
+        isSwiping = false;
+      };
+
+      // Touch events
+      swipeArea.addEventListener('touchstart', (e) => {
+        if (!swipeToggle.checked) return;
+        const touch = e.touches[0];
+        handleStart(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      swipeArea.addEventListener('touchmove', (e) => {
+        if (!swipeToggle.checked) return;
+        const touch = e.touches[0];
+        handleMove(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      swipeArea.addEventListener('touchend', (e) => {
+        if (!swipeToggle.checked) return;
+        const touch = e.changedTouches[0];
+        handleEnd(touch.clientX, touch.clientY);
+        e.preventDefault();
+      });
+
+      // Mouse events
+      swipeArea.addEventListener('mousedown', (e) => {
+        if (!swipeToggle.checked) return;
+        handleStart(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      swipeArea.addEventListener('mousemove', (e) => {
+        if (!swipeToggle.checked) return;
+        handleMove(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      swipeArea.addEventListener('mouseup', (e) => {
+        if (!swipeToggle.checked) return;
+        handleEnd(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+
+      swipeArea.addEventListener('mouseleave', () => {
+        if (!swipeToggle.checked) return;
+        swipeIndicator.style.opacity = '0';
+        isSwiping = false;
+      });
+    }
+
+    // Controls: keyboard
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!gameRunning) startGame({ x: 1, y: 0 });
+        else if (!gameStarted) { gameStarted = true; pendingDir = { x: 1, y: 0 }; }
+        else togglePause();
+        return;
+      }
+      if (!gameRunning) return;
+
+      const map = {
+        ArrowUp: { x: 0, y: -1 },
+        KeyW:    { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 },
+        KeyS:      { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 },
+        KeyA:      { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        KeyD:       { x: 1, y: 0 },
+      };
+      const next = map[e.code];
+      if (next) {
+        if (!gameStarted) gameStarted = true;
+        if (!isReverse(next)) setDirection(next.x, next.y);
+      }
+    });
+
+    function handleDirection(x, y) {
+      if (!gameRunning) return;
+      if (!gameStarted) gameStarted = true;
+      const next = { x, y };
+      if (!isReverse(next)) setDirection(x, y);
+    }
+
+    // Buttons
+    startBtn.addEventListener('click', () => startGame({ x: 1, y: 0 }));
+    resetBtn.addEventListener('click', () => {
+      startBtn.style.display = 'none';
+      startGame({ x: 1, y: 0 });
+    });
+    pauseBtn.addEventListener('click', togglePause);
+    settingsBtn.addEventListener('click', openSettings);
+    closeSettings.addEventListener('click', closeSettingsMenu);
+    overlay.addEventListener('click', closeSettingsMenu);
+    resetHighScoreBtn.addEventListener('click', resetHighScore);
+    clearSettingsBtn.addEventListener('click', clearAllSettings);
+
+    function togglePause() {
+      if (!gameRunning) return;
+      paused = !paused;
+      pauseBtn.setAttribute('aria-pressed', String(paused));
+      if (paused) stopMusic(); else if (musicEnabled) playMusic();
+    }
+
+    // Settings events
+    [soundToggle, musicToggle, wrapToggle, gridToggle, colorblindToggle, hapticsToggle, canvasSwipeToggle, swipeToggle, moveBeepToggle]
+      .forEach(el => el.addEventListener('change', () => {
+        applySettings();
+        if (el === canvasSwipeToggle) {
+          setupCanvasSwipe();
+        }
+        if (el === swipeToggle || el === swipePositionSelect) {
+          setupSwipeControls();
+        }
+      }));
+
+    swipePositionSelect.addEventListener('change', () => {
+      applySettings();
+      setupSwipeControls();
+    });
+
+    // Page visibility
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        paused = true;
+        pauseBtn.setAttribute('aria-pressed', 'true');
+        stopMusic();
+      }
+    });
+
+    // Accessibility: prevent space scrolling on buttons
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('keydown', e => {
+        if (e.code === 'Space') e.preventDefault();
+      });
+    });
+
+    // Initial
+    highScoreEl.textContent = String(highScore);
+    loadSettings();
+    applySettings();
+    setupCanvasSwipe();
+    setupSwipeControls();
+    draw();
+    generateFood();
+  </script>
+</body>
+</html>
